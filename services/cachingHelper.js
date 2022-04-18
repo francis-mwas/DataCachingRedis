@@ -9,28 +9,38 @@ client.on('connect', () => console.log('Connected to Redis!'));
 client.on('error', (err) => console.log('Redis Client Error', err));
 client.connect();
 
-// now lets us add more functionality to exec function
-mongoose.Query.prototype.exec = function () {
-  console.log('About to issue a QUERY');
-
-  const key = Object.assign({}, this.getQuery(), {
-    collection: this.mongooseCollection.name,
-  });
-
-  console.log(key);
-
-  return exec.apply(this, arguments);
+// adding a custom function to mongoose
+mongoose.Query.prototype.cache = function (options = {}) {
+  this.useChache = true;
+  this.hashKey = JSON.stringify(options.key || '');
+  return this; //this allows us this function to behave normally, where we can even chain more methods i.e Model.find().limit() etc etc
 };
+// now lets us add more functionality to exec function
+mongoose.Query.prototype.exec = async function () {
+  if (!this.useChache) {
+    return exec.apply(this, arguments);
+  }
 
-// Person.find({ occupation: /host/ })
-//   .where('name.last')
-//   .equals('Ghost')
-//   .where('age')
-//   .gt(17)
-//   .lt(66)
-//   .where('likes')
-//   .in(['vaporizing', 'talking'])
-//   .limit(10)
-//   .sort('-occupation')
-//   .select('name occupation')
-//   .exec(callback);
+  const key = JSON.stringify(
+    Object.assign({}, this.getQuery(), {
+      collection: this.mongooseCollection.name,
+    })
+  );
+
+  //  check if we have some data in redis first
+  const cachedValue = await client.hGet(this.hashKey, key);
+  // if we have some data,return the data
+  if (cachedValue) {
+    //const doc1 = new this.model(JSON.parse(cachedValue));
+    const doc = JSON.parse(cachedValue);
+
+    return Array.isArray(doc)
+      ? doc.map((d) => new this.model(d))
+      : new this.model(doc);
+  }
+  // otherwise issue a query and store the results in redis
+
+  const result = await exec.apply(this, arguments);
+  client.hSet(this.hashKey, key, JSON.stringify(result), 'EX', 10);
+  return result;
+};
