@@ -13,7 +13,7 @@ require('./services/cachingHelper');
 // mongoose.Promise = global.Promise;
 // mongoose.connect(keys.mongoURI);
 const URI = 'mongodb://127.0.0.1:27017/blog_everyone';
-const connectDB = async () => {
+const connectDB = async () => { 
   try {
     const connection = await mongoose.connect(URI, {
       useNewUrlParser: true,
