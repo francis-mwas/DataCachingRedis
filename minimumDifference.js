@@ -9,6 +9,7 @@ function closestNumbers(_numbers) {
   for (let i = 0; i < numbers.length - 1; i++) {
     min = Math.min(min, Math.abs(numbers[i + 1] - numbers[i]));
   }
+
   for (let i = 0; i < numbers.length - 1; i++) {
     if (Math.abs(numbers[i + 1] - numbers[i]) == min) {
       //let combo = [];
