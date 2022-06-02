@@ -10,7 +10,7 @@ beforeEach(async () => {
   await page.goto('localhost:3000');
 });
 afterEach(async () => {
-  await browser.close();
+  // await browser.close();
 });
 
 test('launch the browser', async () => {
@@ -24,12 +24,12 @@ test('clicking login starts oauth flow', async () => {
   expect(url).toMatch(/accounts\.google\.com/);
 });
 
-test('when signed in, show loguot button', async () => {
+test.only('when signed in, show loguot button', async () => {
   const id = '108786613707153034564';
   const Buffer = require('safe-buffer').Buffer;
   const sessionObject = {
     passport: {
-      user: id,
+      user: _id,
     },
   };
   const sessionString = Buffer.from(JSON.stringify(sessionObject)).toString(
@@ -39,5 +39,14 @@ test('when signed in, show loguot button', async () => {
   const keys = require('../config/keys');
   const keygrip = new Keygrip([keys.cookieKey]);
   const sig = keygrip.sign('session=' + sessionString);
-  console.log(sessionString, sig);
+
+  await page.setCookie({ name: 'session', value: sessionString });
+  await page.setCookie({ name: 'session.sig', value: sig });
+  await page.goto('localhost:3000/blogs');
+
+  await page.waitFor('a[href="/auth/logout"]');
+
+  const text = await page.$eval('a[href="/auth/logout"]', (el) => el.innerHTML);
+
+  expect(text).toEqual('Logout');
 });
